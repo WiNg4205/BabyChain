@@ -1,0 +1,2 @@
+# BabyChain
+A minimal blockchain
