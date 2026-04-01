@@ -7,9 +7,9 @@ class BabyChain:
         self.chain = []
         self.pending_transactions = []
         # The Genesis block (first block)
-        self.new_block()
+        self.new_block(previous_hash="The Beginning", proof="first proof")
         
-    def new_block(self, proof=None, previous_hash=None):
+    def new_block(self, proof, previous_hash=None):
         block = {
             'index': len(self.chain) + 1,
             'timestamp': time(),
@@ -20,22 +20,33 @@ class BabyChain:
         self.pending_transactions = [] # Reset transactions
         self.chain.append(block)
         return block
-    
+
+    def validate_proof(self, proof):
+        block_string = json.dumps(self.hash(self.chain[-1]), sort_keys=True)
+        # Append the input to the previous block
+        proof_string = f"{block_string}{proof}".encode()
+        hash_string = hashlib.sha256(proof_string).hexdigest()
+        return hash_string[0:3] == "000"
+            
     @staticmethod
     def hash(block):
         # Order is important so that the correct hash is created
         block_string = json.dumps(block, sort_keys=True).encode()
         return hashlib.sha256(block_string).hexdigest()
 
+
 # Initialise chain    
 myChain = BabyChain()
 
-# Add transactions
-myChain.pending_transactions.append({"sender": "Satoshi Nakamoto", "recipient": "Hal Finney", "amount": 50})
-myChain.pending_transactions.append({"sender": "Adam Back", "recipient": "Satoshi Nakamoto", "amount": 10})
-
-# Fake block (TODO: adding a proof of work algorithm for block validation)
-myChain.new_block(proof=12345)
+for i in range(10000):
+    if i % 2000 == 0:
+        if i % 4000 == 0:
+            myChain.pending_transactions.append({"sender": "Satoshi Nakamoto", "recipient": "Hal Finney", "amount": 50})
+        else:
+            myChain.pending_transactions.append({"sender": "Adam Back", "recipient": "Satoshi Nakamoto", "amount": 10})
+            
+    if myChain.validate_proof(proof=i):
+        myChain.new_block(proof=i)
 
 # Print the chain to see our work
 print(json.dumps(myChain.chain, indent=4))
