@@ -26,7 +26,25 @@ class BabyChain:
         # Append the input to the previous block
         proof_string = f"{block_string}{proof}".encode()
         hash_string = hashlib.sha256(proof_string).hexdigest()
+        ### Hashes starting with "000" are accepted (16^3 odds)
         return hash_string[0:3] == "000"
+    
+    def validate_chain(self):
+        # The first block is always valid in this algorithm
+        if len(self.chain) < 2:
+            return True
+        
+        # Skip the first block as there is no previous block to append
+        for i, block in enumerate(self.chain[1:]):
+            # i is actually the previous index (compared to the block) as we skipped the first
+            block_string = json.dumps(self.hash(self.chain[i]), sort_keys=True)
+            proof_string = f"{block_string}{block['proof']}".encode()
+            hash_string = hashlib.sha256(proof_string).hexdigest()
+            print(hash_string)
+            if hash_string[0:3] != "000":
+                return False
+            
+        return True
             
     @staticmethod
     def hash(block):
@@ -47,6 +65,7 @@ for i in range(10000):
             
     if myChain.validate_proof(proof=i):
         myChain.new_block(proof=i)
+        print(myChain.validate_chain())
 
 # Print the chain to see our work
 print(json.dumps(myChain.chain, indent=4))
