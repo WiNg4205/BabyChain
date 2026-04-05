@@ -1,6 +1,9 @@
 import hashlib
 import json
+import ecdsa
 from time import time
+from wallet import BabyWallet
+
 
 class BabyChain:
     def __init__(self):
@@ -45,6 +48,40 @@ class BabyChain:
                 return False
             
         return True
+    
+    # sender and recipient arguments are wallets
+    def create_transaction(self, sender, recipient, amount):
+        tx = {
+            "sender": sender.address,
+            "recipient": recipient,
+            "amount": amount
+        }
+        message = json.dumps(tx, sort_keys=True)
+        signature = sender.sign_transaction(message)
+        
+        # Can now complete the other fields of tx
+        tx["signature"] = signature
+        tx["public_key"] = sender.public_key.hex()
+        return tx
+    
+    # TODO: Implement and test this function
+    @staticmethod
+    def verify_transaction(tx):
+        # convert back to bytes as it was converted to hex in create_transaction()
+        public_key = bytes.fromhex(tx["public_key"])
+        # Create corresponding verifying key from public key
+        vk = ecdsa.VerifyingKey.from_string(public_key[1:], curve=ecdsa.SECP256k1)
+        
+        message = json.dumps({
+            "sender": tx["sender"],
+            "recipient": tx["recipient"],
+            "amount": tx["amount"]
+        }, sort_keys=True)
+        
+        try:
+            return vk.verify(bytes.fromhex(tx["signature"]), message.encode())
+        except:
+            return False
             
     @staticmethod
     def hash(block):
@@ -56,12 +93,17 @@ class BabyChain:
 # Initialise chain    
 myChain = BabyChain()
 
+# Initialise wallets for users
+satoshi = BabyWallet()
+hal = BabyWallet()
+adam = BabyWallet()
+
 for i in range(10000):
     if i % 2000 == 0:
         if i % 4000 == 0:
-            myChain.pending_transactions.append({"sender": "Satoshi Nakamoto", "recipient": "Hal Finney", "amount": 50})
+            myChain.pending_transactions.append(myChain.create_transaction(satoshi, hal.address, 50))
         else:
-            myChain.pending_transactions.append({"sender": "Adam Back", "recipient": "Satoshi Nakamoto", "amount": 10})
+            myChain.pending_transactions.append(myChain.create_transaction(adam, satoshi.address, 10))
             
     if myChain.validate_proof(proof=i):
         myChain.new_block(proof=i)
